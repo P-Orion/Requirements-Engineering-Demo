@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniPortal - Student Information System</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .hover-lift:hover { transform: translateY(-2px); transition: all 0.2s; }
+        .schedule-grid { display: grid; grid-template-columns: 60px repeat(5, 1fr); grid-template-rows: auto repeat(10, 60px); }
+        .course-block { border-left: 4px solid; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Mock Data
+        const mockStudent = {
+            name: "Sarah Chen",
+            id: "S20210456",
+            email: "sarah.chen@university.edu",
+            major: "Computer Science, B.S.",
+            year: "Junior",
+            gpa: 3.67,
+            creditsCompleted: 78,
+            accountBalance: 2450.00,
+            holds: [
+                { type: "Advising", department: "CS Department", reason: "Required advising appointment for Fall 2026 registration" }
+            ]
+        };
+
+        const mockSchedule = [
+            { code: "CS 341", title: "Data Structures & Algorithms", instructor: "Dr. Martinez", days: "MWF", time: "10:00 AM - 10:50 AM", location: "Tech 201", color: "#3b82f6" },
+            { code: "CS 356", title: "Database Systems", instructor: "Prof. Johnson", days: "TR", time: "1:00 PM - 2:20 PM", location: "Tech 305", color: "#8b5cf6" },
+            { code: "MATH 310", title: "Discrete Mathematics", instructor: "Dr. Patel", days: "MWF", time: "11:00 AM - 11:50 AM", location: "Math 115", color: "#ec4899" },
+            { code: "CS 390", title: "Software Engineering", instructor: "Prof. Williams", days: "TR", time: "9:30 AM - 10:50 AM", location: "Tech 210", color: "#10b981" },
+            { code: "ENGL 205", title: "Technical Writing", instructor: "Dr. Brown", days: "MW", time: "2:00 PM - 3:20 PM", location: "Lib 302", color: "#f59e0b" }
+        ];
+
+        const mockCourses = [
+            { id: 1, crn: "30145", code: "CS 450", title: "Machine Learning", credits: 3, instructor: "Dr. Zhang", days: "TR", time: "11:00 AM - 12:20 PM", location: "Tech 401", seats: 8, capacity: 30, waitlist: 3, department: "CS", level: 400, prerequisites: ["CS 341", "MATH 310"], description: "Introduction to machine learning algorithms including supervised and unsupervised learning." },
+            { id: 2, crn: "30278", code: "CS 445", title: "Computer Networks", credits: 3, instructor: "Prof. Kim", days: "MWF", time: "1:00 PM - 1:50 PM", location: "Tech 305", seats: 15, capacity: 35, waitlist: 0, department: "CS", level: 400, prerequisites: ["CS 341"], description: "Fundamentals of computer networking, protocols, and distributed systems." },
+            { id: 3, crn: "30892", code: "CS 460", title: "Operating Systems", credits: 4, instructor: "Dr. Martinez", days: "TR", time: "2:30 PM - 4:20 PM", location: "Tech 210", seats: 0, capacity: 25, waitlist: 5, department: "CS", level: 400, prerequisites: ["CS 341"], description: "Design and implementation of operating systems including process management, memory management, and file systems." },
+            { id: 4, crn: "31045", code: "CS 475", title: "Computer Graphics", credits: 3, instructor: "Prof. Anderson", days: "MW", time: "3:30 PM - 4:50 PM", location: "Tech 315", seats: 12, capacity: 30, waitlist: 0, department: "CS", level: 400, prerequisites: ["CS 341", "MATH 310"], description: "3D graphics programming, rendering techniques, and visualization." },
+            { id: 5, crn: "31234", code: "MATH 420", title: "Linear Algebra", credits: 3, instructor: "Dr. Lee", days: "MWF", time: "10:00 AM - 10:50 AM", location: "Math 220", seats: 5, capacity: 40, waitlist: 0, department: "MATH", level: 400, prerequisites: ["MATH 310"], description: "Vector spaces, linear transformations, eigenvalues and eigenvectors." },
+            { id: 6, crn: "31567", code: "CS 420", title: "Artificial Intelligence", credits: 3, instructor: "Dr. Nguyen", days: "TR", time: "9:30 AM - 10:50 AM", location: "Tech 305", seats: 3, capacity: 28, waitlist: 2, department: "CS", level: 400, prerequisites: ["CS 341"], description: "Search algorithms, knowledge representation, planning, and reasoning." },
+            { id: 7, crn: "31789", code: "CS 485", title: "Cybersecurity", credits: 3, instructor: "Prof. Garcia", days: "MW", time: "11:00 AM - 12:20 PM", location: "Tech 401", seats: 18, capacity: 35, waitlist: 0, department: "CS", level: 400, prerequisites: ["CS 356"], description: "Principles of information security, cryptography, and network security." },
+            { id: 8, crn: "32012", code: "PHIL 305", title: "Ethics in Technology", credits: 3, instructor: "Dr. Thompson", days: "TR", time: "1:00 PM - 2:20 PM", location: "Hall 105", seats: 22, capacity: 30, waitlist: 0, department: "PHIL", level: 300, prerequisites: [], description: "Ethical implications of emerging technologies including AI, privacy, and social media." }
+        ];
+
+        const mockPaymentHistory = [
+            { date: "2026-01-15", description: "Spring 2026 Tuition", amount: -8250.00, balance: 2450.00, method: "Payment Plan" },
+            { date: "2025-12-20", description: "Payment Received", amount: 2000.00, balance: 10700.00, method: "Credit Card" },
+            { date: "2025-12-01", description: "Housing Deposit", amount: -450.00, balance: 8700.00, method: "Debit Card" },
+            { date: "2025-11-15", description: "Payment Received", amount: 2000.00, balance: 9150.00, method: "ACH Transfer" },
+            { date: "2025-08-20", description: "Fall 2025 Tuition", amount: -8250.00, balance: 7150.00, method: "Payment Plan" }
+        ];
+
+        const mockDeadlines = [
+            { date: "2026-02-10", event: "Spring Drop Deadline (100% Refund)", type: "important" },
+            { date: "2026-02-28", event: "Advising Hold Clearance Required", type: "warning" },
+            { date: "2026-03-15", event: "Fall 2026 Registration Opens", type: "info" },
+            { date: "2026-04-01", event: "Payment Plan Installment Due", type: "important" }
+        ];
+
+        // Main App Component
+        function UniPortal() {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [cart, setCart] = useState([]);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [departmentFilter, setDepartmentFilter] = useState('all');
+            const [levelFilter, setLevelFilter] = useState('all');
+            const [showCourseDetail, setShowCourseDetail] = useState(null);
+            const [paymentAmount, setPaymentAmount] = useState('');
+            const [notification, setNotification] = useState(null);
+
+            const showNotification = (message, type = 'success') => {
+                setNotification({ message, type });
+                setTimeout(() => setNotification(null), 4000);
+            };
+
+            const addToCart = (course) => {
+                if (cart.find(c => c.id === course.id)) {
+                    showNotification('Course already in cart', 'warning');
+                    return;
+                }
+
+                // Check for time conflicts
+                const conflict = cart.find(c => {
+                    if (c.days === course.days) {
+                        // Simplified conflict detection
+                        return true;
+                    }
+                    const commonDays = c.days.split('').filter(d => course.days.includes(d));
+                    return commonDays.length > 0;
+                });
+
+                if (conflict) {
+                    showNotification(`Time conflict detected with ${conflict.code}`, 'error');
+                    return;
+                }
+
+                // Check prerequisites
+                const completedCourses = mockSchedule.map(s => s.code);
+                const missingPrereqs = course.prerequisites.filter(p => !completedCourses.includes(p));
+
+                if (missingPrereqs.length > 0) {
+                    showNotification(`Missing prerequisites: ${missingPrereqs.join(', ')}`, 'error');
+                    return;
+                }
+
+                setCart([...cart, course]);
+                showNotification(`${course.code} added to cart`, 'success');
+            };
+
+            const removeFromCart = (courseId) => {
+                setCart(cart.filter(c => c.id !== courseId));
+                showNotification('Course removed from cart', 'success');
+            };
+
+            const registerCourses = () => {
+                if (cart.length === 0) {
+                    showNotification('Cart is empty', 'warning');
+                    return;
+                }
+                if (mockStudent.holds.length > 0) {
+                    showNotification('Cannot register - you have active holds', 'error');
+                    return;
+                }
+                showNotification(`Successfully registered for ${cart.length} course(s)!`, 'success');
+                setCart([]);
+            };
+
+            const filteredCourses = mockCourses.filter(course => {
+                const matchesSearch = course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    course.instructor.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesDept = departmentFilter === 'all' || course.department === departmentFilter;
+                const matchesLevel = levelFilter === 'all' || Math.floor(course.level / 100) * 100 === parseInt(levelFilter);
+                return matchesSearch && matchesDept && matchesLevel;
+            });
+
+            const totalCartCredits = cart.reduce((sum, c) => sum + c.credits, 0);
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    {/* Header */}
+                    <header className="gradient-bg text-white shadow-lg">
+                        <div className="max-w-7xl mx-auto px-4 py-6">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h1 className="text-3xl font-bold">UniPortal</h1>
+                                    <p className="text-purple-100 text-sm mt-1">University Student Information System</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-semibold text-lg">{mockStudent.name}</p>
+                                    <p className="text-purple-100 text-sm">{mockStudent.id} • {mockStudent.major}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Notification */}
+                    {notification && (
+                        <div className={`fixed top-20 right-4 z-50 px-6 py-4 rounded-lg shadow-lg ${
+                            notification.type === 'success' ? 'bg-green-500' :
+                            notification.type === 'error' ? 'bg-red-500' :
+                            notification.type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                        } text-white font-medium animate-pulse`}>
+                            {notification.message}
+                        </div>
+                    )}
+
+                    {/* Navigation Tabs */}
+                    <div className="bg-white shadow">
+                        <div className="max-w-7xl mx-auto px-4">
+                            <nav className="flex space-x-8">
+                                {['dashboard', 'registration', 'billing'].map(tab => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`py-4 px-2 font-medium text-sm border-b-2 transition-colors ${
+                                            activeTab === tab
+                                                ? 'border-purple-600 text-purple-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <main className="max-w-7xl mx-auto px-4 py-8">
+                        {activeTab === 'dashboard' && <Dashboard student={mockStudent} />}
+                        {activeTab === 'registration' && (
+                            <Registration
+                                courses={filteredCourses}
+                                cart={cart}
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                departmentFilter={departmentFilter}
+                                setDepartmentFilter={setDepartmentFilter}
+                                levelFilter={levelFilter}
+                                setLevelFilter={setLevelFilter}
+                                addToCart={addToCart}
+                                removeFromCart={removeFromCart}
+                                registerCourses={registerCourses}
+                                totalCartCredits={totalCartCredits}
+                                showCourseDetail={showCourseDetail}
+                                setShowCourseDetail={setShowCourseDetail}
+                            />
+                        )}
+                        {activeTab === 'billing' && (
+                            <Billing
+                                student={mockStudent}
+                                paymentHistory={mockPaymentHistory}
+                                paymentAmount={paymentAmount}
+                                setPaymentAmount={setPaymentAmount}
+                                showNotification={showNotification}
+                            />
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        // Dashboard Component
+        function Dashboard({ student }) {
+            const timeSlots = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+            return (
+                <div className="space-y-6">
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="bg-white p-6 rounded-lg card-shadow hover-lift">
+                            <div className="text-sm text-gray-600 font-medium">Current GPA</div>
+                            <div className="text-3xl font-bold text-purple-600 mt-2">{student.gpa.toFixed(2)}</div>
+                            <div className="text-xs text-gray-500 mt-1">{student.creditsCompleted} credits completed</div>
+                        </div>
+                        <div className="bg-white p-6 rounded-lg card-shadow hover-lift">
+                            <div className="text-sm text-gray-600 font-medium">Account Balance</div>
+                            <div className="text-3xl font-bold text-red-600 mt-2">${student.accountBalance.toLocaleString()}</div>
+                            <div className="text-xs text-gray-500 mt-1">Payment due Apr 1</div>
+                        </div>
+                        <div className="bg-white p-6 rounded-lg card-shadow hover-lift">
+                            <div className="text-sm text-gray-600 font-medium">Enrolled Courses</div>
+                            <div className="text-3xl font-bold text-blue-600 mt-2">{mockSchedule.length}</div>
+                            <div className="text-xs text-gray-500 mt-1">16 credit hours</div>
+                        </div>
+                        <div className="bg-white p-6 rounded-lg card-shadow hover-lift">
+                            <div className="text-sm text-gray-600 font-medium">Active Holds</div>
+                            <div className="text-3xl font-bold text-yellow-600 mt-2">{student.holds.length}</div>
+                            <div className="text-xs text-gray-500 mt-1">Action required</div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Weekly Schedule */}
+                        <div className="lg:col-span-2 bg-white p-6 rounded-lg card-shadow">
+                            <h2 className="text-xl font-bold mb-4">Weekly Schedule</h2>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left py-2 px-2 text-sm font-medium text-gray-600">Time</th>
+                                            {days.map(day => (
+                                                <th key={day} className="text-left py-2 px-2 text-sm font-medium text-gray-600">{day.slice(0, 3)}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {timeSlots.map(time => (
+                                            <tr key={time} className="border-b border-gray-100">
+                                                <td className="py-3 px-2 text-xs text-gray-500">{time}</td>
+                                                {days.map(day => {
+                                                    const course = mockSchedule.find(s =>
+                                                        s.days.includes(day[0]) && s.time.startsWith(time)
+                                                    );
+                                                    return (
+                                                        <td key={day} className="py-3 px-2">
+                                                            {course && (
+                                                                <div
+                                                                    className="text-xs p-2 rounded course-block"
+                                                                    style={{
+                                                                        backgroundColor: course.color + '20',
+                                                                        borderLeftColor: course.color
+                                                                    }}
+                                                                >
+                                                                    <div className="font-semibold">{course.code}</div>
+                                                                    <div className="text-gray-600">{course.location}</div>
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Right Column */}
+                        <div className="space-y-6">
+                            {/* Active Holds */}
+                            {student.holds.length > 0 && (
+                                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                                    <h3 className="font-semibold text-yellow-900 mb-2 flex items-center">
+                                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                        </svg>
+                                        Active Holds
+                                    </h3>
+                                    {student.holds.map((hold, idx) => (
+                                        <div key={idx} className="text-sm">
+                                            <div className="font-medium text-yellow-900">{hold.type} Hold</div>
+                                            <div className="text-yellow-800 text-xs mt-1">{hold.reason}</div>
+                                            <div className="text-yellow-700 text-xs mt-1">Contact: {hold.department}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Upcoming Deadlines */}
+                            <div className="bg-white p-4 rounded-lg card-shadow">
+                                <h3 className="font-semibold mb-3">Upcoming Deadlines</h3>
+                                <div className="space-y-3">
+                                    {mockDeadlines.map((deadline, idx) => (
+                                        <div key={idx} className="flex items-start">
+                                            <div className={`w-2 h-2 rounded-full mt-1.5 mr-3 ${
+                                                deadline.type === 'important' ? 'bg-red-500' :
+                                                deadline.type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                                            }`}></div>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-medium text-gray-900">{deadline.event}</div>
+                                                <div className="text-xs text-gray-500">{deadline.date}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Current Courses */}
+                            <div className="bg-white p-4 rounded-lg card-shadow">
+                                <h3 className="font-semibold mb-3">Current Courses</h3>
+                                <div className="space-y-2">
+                                    {mockSchedule.map((course, idx) => (
+                                        <div key={idx} className="text-sm">
+                                            <div className="font-medium text-gray-900">{course.code}</div>
+                                            <div className="text-xs text-gray-600">{course.title}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Registration Component
+        function Registration({ courses, cart, searchTerm, setSearchTerm, departmentFilter, setDepartmentFilter,
+                                levelFilter, setLevelFilter, addToCart, removeFromCart, registerCourses,
+                                totalCartCredits, showCourseDetail, setShowCourseDetail }) {
+            return (
+                <div className="space-y-6">
+                    {/* Search and Filters */}
+                    <div className="bg-white p-6 rounded-lg card-shadow">
+                        <h2 className="text-xl font-bold mb-4">Course Search</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input
+                                type="text"
+                                placeholder="Search by course code, title, or instructor..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="md:col-span-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                            <select
+                                value={departmentFilter}
+                                onChange={(e) => setDepartmentFilter(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            >
+                                <option value="all">All Departments</option>
+                                <option value="CS">Computer Science</option>
+                                <option value="MATH">Mathematics</option>
+                                <option value="PHIL">Philosophy</option>
+                            </select>
+                            <select
+                                value={levelFilter}
+                                onChange={(e) => setLevelFilter(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            >
+                                <option value="all">All Levels</option>
+                                <option value="300">300-level</option>
+                                <option value="400">400-level</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Course Catalog */}
+                        <div className="lg:col-span-2 space-y-4">
+                            <div className="bg-white p-6 rounded-lg card-shadow">
+                                <h2 className="text-xl font-bold mb-4">Available Courses ({courses.length})</h2>
+                                <div className="space-y-3">
+                                    {courses.map(course => (
+                                        <div key={course.id} className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3">
+                                                        <h3 className="font-bold text-lg text-gray-900">{course.code}</h3>
+                                                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">CRN: {course.crn}</span>
+                                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{course.credits} cr</span>
+                                                    </div>
+                                                    <p className="text-gray-700 font-medium mt-1">{course.title}</p>
+                                                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                                                        <span>👤 {course.instructor}</span>
+                                                        <span>📅 {course.days}</span>
+                                                        <span>🕒 {course.time}</span>
+                                                        <span>📍 {course.location}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 mt-2">
+                                                        <span className={`text-sm font-medium ${
+                                                            course.seats > 10 ? 'text-green-600' :
+                                                            course.seats > 0 ? 'text-yellow-600' : 'text-red-600'
+                                                        }`}>
+                                                            {course.seats > 0 ? `${course.seats} seats available` : 'FULL'}
+                                                        </span>
+                                                        {course.waitlist > 0 && (
+                                                            <span className="text-sm text-gray-600">({course.waitlist} on waitlist)</span>
+                                                        )}
+                                                        {course.prerequisites.length > 0 && (
+                                                            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                                                Prerequisites required
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setShowCourseDetail(course)}
+                                                        className="text-sm text-purple-600 hover:text-purple-800 mt-2"
+                                                    >
+                                                        View details →
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    onClick={() => addToCart(course)}
+                                                    disabled={course.seats === 0}
+                                                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                                                        course.seats === 0
+                                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                            : 'bg-purple-600 text-white hover:bg-purple-700'
+                                                    }`}
+                                                >
+                                                    Add to Cart
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Shopping Cart */}
+                        <div className="bg-white p-6 rounded-lg card-shadow h-fit sticky top-4">
+                            <h2 className="text-xl font-bold mb-4">Shopping Cart</h2>
+                            {cart.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <svg className="w-16 h-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <p>Your cart is empty</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-3 mb-4">
+                                        {cart.map(course => (
+                                            <div key={course.id} className="border border-gray-200 rounded p-3">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <div className="font-semibold text-gray-900">{course.code}</div>
+                                                        <div className="text-sm text-gray-600">{course.title}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">{course.credits} credits • {course.days} {course.time}</div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeFromCart(course.id)}
+                                                        className="text-red-600 hover:text-red-800 ml-2"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="border-t pt-4">
+                                        <div className="flex justify-between mb-2">
+                                            <span className="font-medium">Total Credits:</span>
+                                            <span className="font-bold">{totalCartCredits}</span>
+                                        </div>
+                                        <div className="flex justify-between mb-4">
+                                            <span className="font-medium">Estimated Tuition:</span>
+                                            <span className="font-bold">${(totalCartCredits * 850).toLocaleString()}</span>
+                                        </div>
+                                        <button
+                                            onClick={registerCourses}
+                                            className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors"
+                                        >
+                                            Register for Courses
+                                        </button>
+                                        {mockStudent.holds.length > 0 && (
+                                            <p className="text-xs text-red-600 mt-2 text-center">⚠️ You have active holds that may prevent registration</p>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Course Detail Modal */}
+                    {showCourseDetail && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCourseDetail(null)}>
+                            <div className="bg-white rounded-lg p-6 max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h2 className="text-2xl font-bold">{showCourseDetail.code}</h2>
+                                        <p className="text-lg text-gray-700">{showCourseDetail.title}</p>
+                                    </div>
+                                    <button onClick={() => setShowCourseDetail(null)} className="text-gray-500 hover:text-gray-700">
+                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div><span className="font-medium">CRN:</span> {showCourseDetail.crn}</div>
+                                        <div><span className="font-medium">Credits:</span> {showCourseDetail.credits}</div>
+                                        <div><span className="font-medium">Instructor:</span> {showCourseDetail.instructor}</div>
+                                        <div><span className="font-medium">Department:</span> {showCourseDetail.department}</div>
+                                        <div><span className="font-medium">Schedule:</span> {showCourseDetail.days} {showCourseDetail.time}</div>
+                                        <div><span className="font-medium">Location:</span> {showCourseDetail.location}</div>
+                                        <div><span className="font-medium">Seats Available:</span> {showCourseDetail.seats} / {showCourseDetail.capacity}</div>
+                                        <div><span className="font-medium">Waitlist:</span> {showCourseDetail.waitlist}</div>
+                                    </div>
+                                    {showCourseDetail.prerequisites.length > 0 && (
+                                        <div>
+                                            <span className="font-medium">Prerequisites:</span>
+                                            <div className="flex gap-2 mt-1">
+                                                {showCourseDetail.prerequisites.map((prereq, idx) => (
+                                                    <span key={idx} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">{prereq}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <span className="font-medium">Description:</span>
+                                        <p className="text-gray-700 mt-1">{showCourseDetail.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Billing Component
+        function Billing({ student, paymentHistory, paymentAmount, setPaymentAmount, showNotification }) {
+            const handlePayment = () => {
+                const amount = parseFloat(paymentAmount);
+                if (!amount || amount <= 0) {
+                    showNotification('Please enter a valid amount', 'error');
+                    return;
+                }
+                if (amount > student.accountBalance) {
+                    showNotification('Payment amount exceeds balance', 'error');
+                    return;
+                }
+                showNotification(`Payment of $${amount.toFixed(2)} processed successfully!`, 'success');
+                setPaymentAmount('');
+            };
+
+            return (
+                <div className="space-y-6">
+                    {/* Balance Summary */}
+                    <div className="bg-white p-6 rounded-lg card-shadow">
+                        <h2 className="text-xl font-bold mb-4">Account Summary</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <div className="text-sm text-gray-600">Total Charges</div>
+                                <div className="text-2xl font-bold text-gray-900 mt-1">$10,700.00</div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-gray-600">Payments Made</div>
+                                <div className="text-2xl font-bold text-green-600 mt-1">$8,250.00</div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-gray-600">Current Balance</div>
+                                <div className="text-2xl font-bold text-red-600 mt-1">${student.accountBalance.toLocaleString()}</div>
+                                <div className="text-xs text-gray-500 mt-1">Next payment due: April 1, 2026</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Payment History */}
+                        <div className="lg:col-span-2 bg-white p-6 rounded-lg card-shadow">
+                            <h2 className="text-xl font-bold mb-4">Payment History</h2>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {paymentHistory.map((payment, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                <td className="px-4 py-3 text-sm text-gray-900">{payment.date}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-900">{payment.description}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-600">{payment.method}</td>
+                                                <td className={`px-4 py-3 text-sm text-right font-medium ${payment.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {payment.amount > 0 ? '+' : ''}${Math.abs(payment.amount).toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-right text-gray-900">${payment.balance.toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Make Payment */}
+                        <div className="bg-white p-6 rounded-lg card-shadow h-fit">
+                            <h2 className="text-xl font-bold mb-4">Make a Payment</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Amount</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-2.5 text-gray-500">$</span>
+                                        <input
+                                            type="number"
+                                            value={paymentAmount}
+                                            onChange={(e) => setPaymentAmount(e.target.value)}
+                                            placeholder="0.00"
+                                            className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            onClick={() => setPaymentAmount(student.accountBalance.toString())}
+                                            className="text-xs bg-gray-100 px-2 py-1 rounded hover:bg-gray-200"
+                                        >
+                                            Pay Full Balance
+                                        </button>
+                                        <button
+                                            onClick={() => setPaymentAmount('500')}
+                                            className="text-xs bg-gray-100 px-2 py-1 rounded hover:bg-gray-200"
+                                        >
+                                            Pay $500
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                                    <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                        <option>Credit Card</option>
+                                        <option>Debit Card</option>
+                                        <option>ACH Transfer</option>
+                                        <option>Payment Plan</option>
+                                    </select>
+                                </div>
+
+                                <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                                    <div className="font-medium mb-1">💳 Payment Plan Available</div>
+                                    <div className="text-xs">Spread your balance over 5 monthly installments with no interest.</div>
+                                </div>
+
+                                <button
+                                    onClick={handlePayment}
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors"
+                                >
+                                    Process Payment
+                                </button>
+
+                                <div className="text-xs text-gray-500 text-center">
+                                    Payments are processed securely via Stripe
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<UniPortal />);
+    </script>
+</body>
+</html>
