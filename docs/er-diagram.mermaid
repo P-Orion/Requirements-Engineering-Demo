@@ -1,0 +1,171 @@
+erDiagram
+    STUDENT ||--o{ ENROLLMENT : registers
+    STUDENT ||--o{ WAITLIST_ENTRY : joins
+    STUDENT ||--o{ PAYMENT : makes
+    STUDENT ||--o{ HOLD : has
+    STUDENT {
+        int student_id PK
+        string first_name
+        string last_name
+        string email
+        date date_of_birth
+        string residency_status
+        enum academic_standing
+        float cumulative_gpa
+        int credits_completed
+        int user_id FK
+    }
+
+    USER {
+        int user_id PK
+        string username
+        string password_hash
+        string role
+        datetime last_login
+    }
+
+    STUDENT ||--|| USER : has
+    FACULTY ||--|| USER : has
+    ADMIN ||--|| USER : has
+
+    FACULTY ||--o{ SECTION : teaches
+    FACULTY {
+        int faculty_id PK
+        string first_name
+        string last_name
+        string email
+        string department
+        string title
+        int user_id FK
+    }
+
+    ADMIN {
+        int admin_id PK
+        string first_name
+        string last_name
+        string email
+        string department
+        int user_id FK
+    }
+
+    COURSE ||--o{ SECTION : "offered as"
+    COURSE ||--o{ PREREQUISITE : requires
+    COURSE {
+        int course_id PK
+        string course_code
+        string title
+        text description
+        int credits
+        string department
+        int course_level
+    }
+
+    PREREQUISITE {
+        int prerequisite_id PK
+        int course_id FK
+        int required_course_id FK
+        string min_grade
+    }
+
+    SECTION ||--o{ ENROLLMENT : contains
+    SECTION ||--o{ WAITLIST_ENTRY : has
+    SECTION ||--|| TERM : "scheduled in"
+    SECTION {
+        int section_id PK
+        string crn
+        int course_id FK
+        int term_id FK
+        int faculty_id FK
+        string meeting_days
+        time start_time
+        time end_time
+        string location
+        int capacity
+        int enrolled_count
+        int waitlist_count
+    }
+
+    TERM {
+        int term_id PK
+        string term_code
+        string term_name
+        date start_date
+        date end_date
+        date add_deadline
+        date drop_deadline
+        date withdraw_deadline
+    }
+
+    ENROLLMENT {
+        int enrollment_id PK
+        int student_id FK
+        int section_id FK
+        datetime enrolled_at
+        string status
+        string grade
+        datetime grade_submitted_at
+    }
+
+    WAITLIST_ENTRY {
+        int waitlist_id PK
+        int student_id FK
+        int section_id FK
+        int position
+        datetime added_at
+        int priority_score
+    }
+
+    INVOICE ||--o{ PAYMENT : "paid by"
+    STUDENT ||--o{ INVOICE : receives
+    INVOICE {
+        int invoice_id PK
+        int student_id FK
+        int term_id FK
+        decimal tuition_amount
+        decimal fees_amount
+        decimal total_amount
+        decimal amount_paid
+        decimal balance
+        date due_date
+        string status
+    }
+
+    PAYMENT {
+        int payment_id PK
+        int invoice_id FK
+        int student_id FK
+        decimal amount
+        datetime payment_date
+        string payment_method
+        string transaction_id
+        string status
+    }
+
+    HOLD {
+        int hold_id PK
+        int student_id FK
+        string hold_type
+        string reason
+        date placed_date
+        date cleared_date
+        string issuing_department
+        boolean is_active
+    }
+
+    DEGREE_REQUIREMENT ||--o{ REQUIREMENT_COMPLETION : "completed by"
+    STUDENT ||--o{ REQUIREMENT_COMPLETION : completes
+    DEGREE_REQUIREMENT {
+        int requirement_id PK
+        string requirement_type
+        string description
+        int required_credits
+        string category
+    }
+
+    REQUIREMENT_COMPLETION {
+        int completion_id PK
+        int student_id FK
+        int requirement_id FK
+        int course_id FK
+        date completed_date
+    }

@@ -1,0 +1,76 @@
+graph TB
+    subgraph "Client Layer"
+        WEB[Web Browser - React SPA]
+        MOBILE[Mobile Browser]
+    end
+
+    subgraph "API Gateway"
+        NGINX[NGINX Reverse Proxy]
+        AUTH[Authentication Service - JWT]
+    end
+
+    subgraph "Application Services"
+        REG[Registration Service - Django]
+        BILL[Billing Service - Django]
+        GRADE[Grading Service - Django]
+        PORTAL[Student Portal Service - Django]
+        ADMIN[Admin Service - Django]
+    end
+
+    subgraph "Data Layer"
+        DB[(PostgreSQL Database)]
+        CACHE[(Redis Cache)]
+    end
+
+    subgraph "Background Processing"
+        QUEUE[RabbitMQ Message Queue]
+        WORKER[Celery Workers]
+    end
+
+    subgraph "External Integrations"
+        LMS[Learning Management System - Canvas]
+        PAYMENT[Payment Gateway - Stripe]
+        LDAP[Identity Provider - LDAP/SAML]
+        EMAIL[Email Service - SendGrid]
+        STORAGE[Document Storage - S3]
+    end
+
+    WEB --> NGINX
+    MOBILE --> NGINX
+    NGINX --> AUTH
+
+    AUTH --> REG
+    AUTH --> BILL
+    AUTH --> GRADE
+    AUTH --> PORTAL
+    AUTH --> ADMIN
+
+    REG --> DB
+    BILL --> DB
+    GRADE --> DB
+    PORTAL --> DB
+    ADMIN --> DB
+
+    REG --> CACHE
+    BILL --> CACHE
+    GRADE --> CACHE
+
+    REG --> QUEUE
+    BILL --> QUEUE
+    GRADE --> QUEUE
+
+    QUEUE --> WORKER
+    WORKER --> DB
+    WORKER --> EMAIL
+    WORKER --> LMS
+
+    BILL --> PAYMENT
+    AUTH --> LDAP
+    PORTAL --> STORAGE
+
+    style WEB fill:#e1f5ff
+    style MOBILE fill:#e1f5ff
+    style DB fill:#fff4e1
+    style CACHE fill:#fff4e1
+    style QUEUE fill:#f0e1ff
+    style WORKER fill:#f0e1ff
